@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 sqlite = "0.37.0"
+dirs = "6.0.0"
