@@ -1,46 +1,25 @@
-use dirs;
-use std::path::PathBuf;
-use std::path::Path;
-
 mod migrations;
 mod task;
+mod config;
 
 fn main() {
-    let mut path = match dirs::config_dir() {
-        None => {
-            println!("Cannot find config directory. Using workdir.");
-            PathBuf::new()
-        },
-
-        Some(x) => x
-    };
-
-    path.push("tasklist");
-
-    if !path.exists() {
-        println!("path does not exist");
-        std::fs::create_dir(&path);
-    }
-
-    path.push("tasks.db");
-
-    let connection = sqlite::open(path).unwrap();
+    let connection = sqlite::open(config::get_db_path()).unwrap();
 
     match connection.execute(migrations::TEST_QUERY) {
         Ok(_) => {},
         Err(_) => {
             println!("DB does not exist. Creating table...");
             connection.execute(migrations::CREATE_TABLE).unwrap();
+			// TODO: temporary, remove this later
+    		connection.execute(migrations::SAMPLE_ENTRIES).unwrap();
         }
     };
 
-    connection.execute(migrations::SAMPLE_ENTRIES).unwrap();
-
     let mut tasks: Vec<task::Task> = vec![];
 
-    let query = "SELECT * FROM tasks;";
+    let query = "SELECT * FROM tasks ORDER BY id;";
 
-    let result = connection.iterate(query, |vals| {
+    let _ = connection.iterate(query, |vals| {
         let mut tb = task::TaskBuilder::new();
 
         for &(key, value) in vals.iter() {
@@ -67,8 +46,16 @@ fn main() {
 
         }
         tasks.push(tb.build().expect("all required columns done"));
-        true
-    });
 
-    println!("{:?}", tasks);
+		for task in tasks.iter() {
+			println!("{}\t{}\t{}\t{}\t",
+				task.id,
+				task.project,
+				task.task,
+				match task.deadline {
+					None => 0,
+					Some(x) => x
+				});
+		}
+    });
 }

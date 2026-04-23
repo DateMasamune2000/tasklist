@@ -1,9 +1,9 @@
 #[derive(Debug)]
 pub struct Task {
-	id: u64,
-	project: String,
-	task: String,
-	deadline: Option<u64>,
+	pub id: u64,
+	pub project: String,
+	pub task: String,
+	pub deadline: Option<u64>,
 }
 
 #[derive(Default)]
