@@ -1,23 +1,15 @@
-mod migrations;
 mod task;
 mod config;
+mod migrations;
 
 fn main() {
     let connection = sqlite::open(config::get_db_path()).unwrap();
 
-    match connection.execute(migrations::TEST_QUERY) {
-        Ok(_) => {},
-        Err(_) => {
-            println!("DB does not exist. Creating table...");
-            connection.execute(migrations::CREATE_TABLE).unwrap();
-			// TODO: temporary, remove this later
-    		connection.execute(migrations::SAMPLE_ENTRIES).unwrap();
-        }
-    };
+	config::create_table_if_absent(&connection);
 
     let mut tasks: Vec<task::Task> = vec![];
 
-    let query = "SELECT * FROM tasks ORDER BY id;";
+    let query = "SELECT * FROM tasks;";
 
     let _ = connection.iterate(query, |vals| {
         let mut tb = task::TaskBuilder::new();
@@ -47,15 +39,17 @@ fn main() {
         }
         tasks.push(tb.build().expect("all required columns done"));
 
-		for task in tasks.iter() {
-			println!("{}\t{}\t{}\t{}\t",
-				task.id,
-				task.project,
-				task.task,
-				match task.deadline {
-					None => 0,
-					Some(x) => x
-				});
-		}
+        true
     });
+
+	for task in tasks.iter() {
+		println!("{}\t{}\t{}\t{}\t",
+			task.id,
+			task.project,
+			task.task,
+			match task.deadline {
+				None => 0,
+				Some(x) => x
+			});
+	}
 }
